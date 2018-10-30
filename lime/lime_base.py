@@ -2,9 +2,16 @@
 Contains abstract functionality for learning locally linear sparse model.
 """
 from __future__ import print_function
+import sys
+
+sys.path.append('../../pyGAM')
+
 import numpy as np
 from sklearn.linear_model import Ridge, lars_path
 from sklearn.utils import check_random_state
+
+from pygam import LinearGAM
+
 
 
 class LimeBase(object):
@@ -112,6 +119,7 @@ class LimeBase(object):
                                    label,
                                    num_features,
                                    feature_selection='auto',
+                                   model_type='linear',
                                    model_regressor=None):
         """Takes perturbed data, labels and distances, returns explanation.
 
@@ -155,24 +163,50 @@ class LimeBase(object):
                                                weights,
                                                num_features,
                                                feature_selection)
+        if model_type == 'linear':
+            if model_regressor is None:
+                model_regressor = Ridge(alpha=1, fit_intercept=True,
+                                        random_state=self.random_state)
+            easy_model = model_regressor
+            easy_model.fit(neighborhood_data[:, used_features],
+                           labels_column, sample_weight=weights)
+            prediction_score = easy_model.score(
+                neighborhood_data[:, used_features],
+                labels_column, sample_weight=weights)
 
-        if model_regressor is None:
-            model_regressor = Ridge(alpha=1, fit_intercept=True,
-                                    random_state=self.random_state)
-        easy_model = model_regressor
-        easy_model.fit(neighborhood_data[:, used_features],
-                       labels_column, sample_weight=weights)
-        prediction_score = easy_model.score(
-            neighborhood_data[:, used_features],
-            labels_column, sample_weight=weights)
+            local_pred = easy_model.predict(neighborhood_data[0, used_features].reshape(1, -1))
 
-        local_pred = easy_model.predict(neighborhood_data[0, used_features].reshape(1, -1))
+            if self.verbose:
+                print('Intercept', easy_model.intercept_)
+                print('Prediction_local', local_pred,)
+                print('Right:', neighborhood_labels[0, label])
+            return (easy_model.intercept_,
+                    sorted(zip(used_features, easy_model.coef_),
+                           key=lambda x: np.abs(x[1]), reverse=True),
+                    prediction_score, local_pred)
 
-        if self.verbose:
-            print('Intercept', easy_model.intercept_)
-            print('Prediction_local', local_pred,)
-            print('Right:', neighborhood_labels[0, label])
-        return (easy_model.intercept_,
-                sorted(zip(used_features, easy_model.coef_),
-                       key=lambda x: np.abs(x[1]), reverse=True),
-                prediction_score, local_pred)
+        if model_type == 'gam':
+            easy_model = LinearGAM().fit(
+                    neighborhood_data[:, used_features],
+                    labels_column,
+                    weights=weights)
+            prediction_score = easy_model.statistics_['pseudo_r2']['explained_deviance']
+
+            data_row = neighborhood_data[0, used_features].reshape(1, -1)
+
+            local_pred = easy_model.predict(data_row)
+            
+            intercept = easy_model.predict(np.zeros(data_row.shape))
+
+            coef = []
+            for i, term in enumerate(easy_model.terms):
+                if term.isintercept:
+                    continue
+                pdep = easy_model.partial_dependence(term=i, X=data_row)
+                coef.append(pdep[0])
+
+            return (intercept,
+                    sorted(zip(used_features, coef),
+                           key=lambda x: np.abs(x[1]), reverse=True),
+                    prediction_score,
+                    local_pred)

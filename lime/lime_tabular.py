@@ -237,6 +237,7 @@ class LimeTabularExplainer(object):
                          num_features=10,
                          num_samples=5000,
                          distance_metric='euclidean',
+                         model_type='linear',
                          model_regressor=None):
         """Generates explanations for a prediction.
 
@@ -376,6 +377,7 @@ class LimeTabularExplainer(object):
                     distances,
                     label,
                     num_features,
+                    model_type=model_type,
                     model_regressor=model_regressor,
                     feature_selection=self.feature_selection)
 
