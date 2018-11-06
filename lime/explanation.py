@@ -4,6 +4,7 @@ Explanation class, with visualization functions.
 from __future__ import unicode_literals
 from io import open
 import os
+import math
 import os.path
 import json
 import string
@@ -12,6 +13,10 @@ import numpy as np
 from .exceptions import LimeError
 
 from sklearn.utils import check_random_state
+
+import matplotlib.pyplot as plt
+import base64
+from io import BytesIO
 
 
 def id_generator(size=15, random_state=None):
@@ -76,7 +81,11 @@ class Explanation(object):
 
     def __init__(self,
                  domain_mapper,
+                 data_row=None,
                  mode='classification',
+                 mean=None,
+                 scale=None,
+                 feature_names=None,
                  class_names=None,
                  random_state=None):
         """
@@ -92,13 +101,18 @@ class Explanation(object):
                 initialized using the internal numpy seed.
         """
         self.random_state = random_state
+        self.data_row = data_row
         self.mode = mode
         self.domain_mapper = domain_mapper
         self.local_exp = {}
+        self.gam_exp = {}
+        self.mean = mean
+        self.scale = scale
         self.intercept = {}
         self.score = None
         self.local_pred = None
         self.scaled_data = None
+        self.feature_names = feature_names
         if mode == 'classification':
             self.class_names = class_names
             self.top_labels = None
@@ -252,13 +266,54 @@ class Explanation(object):
         bundle = open(os.path.join(this_dir, 'bundle.js'),
                       encoding="utf8").read()
 
-        out = u'''<html>
+        out = u'''
+        <html>
         <meta http-equiv="content-type" content="text/html; charset=UTF8">
-        <head><script>%s </script></head><body>''' % bundle
-        random_id = id_generator(size=15, random_state=check_random_state(self.random_state))
+        <head>
+        <script>
+        %s
+        </script>
+        </head>
+        <body>
+        ''' % bundle
+
+        random_id_linear = id_generator(size=15, random_state=check_random_state(self.random_state))
+        random_id_gam = id_generator(size=15, random_state=check_random_state(self.random_state))
         out += u'''
+        <h1>LIME</h1>
         <div class="lime top_div" id="top_div%s"></div>
-        ''' % random_id
+        ''' % random_id_linear
+
+        out += u'''
+        <h1>G-LIME</h1>
+        <div class="lime top_div" id="top_div%s">
+        ''' % random_id_gam
+
+        for label in labels:
+            feature_plots = self.gam_exp[label]
+            nrows = int(math.ceil(len(feature_plots) / 3.0)) 
+            fig, axes = plt.subplots(ncols=3, nrows=nrows, sharey=True)
+            for i, f_plot in enumerate(feature_plots):
+                row = i % 3
+                col = i // 3
+                ax = axes[col][row]
+                feature = f_plot[0]
+                ax.set_title('Feature %d: %s' % (feature, self.feature_names[feature]))
+                ax.set_ylabel(str(self.class_names[label]))
+                x = f_plot[1] * self.mean[feature] + self.scale[feature]
+                y = f_plot[2]
+                ax.plot(x, y)
+                ax.axvline(x=self.data_row[feature], c='r', ls='--')
+
+            fig.set_size_inches(12, 4 * nrows)
+            fig.tight_layout()
+            tmpfile = BytesIO()
+            fig.savefig(tmpfile, format='png')
+            plt.close(fig)
+            encoded = base64.b64encode(tmpfile.getvalue())
+            out += u'''<img src=\'data:image/png;base64,{}\'>'''.format(encoded)
+
+        out += u'''</div>'''
 
         predict_proba_js = ''
         if self.mode == "classification" and predict_proba:
@@ -307,7 +362,6 @@ class Explanation(object):
             html_data = self.local_exp[labels[0]]
         else:
             html_data = self.local_exp[self.dummy_label]
-
         raw_js += self.domain_mapper.visualize_instance_html(
                 html_data,
                 labels[0] if self.mode == "classification" else self.dummy_label,
@@ -322,7 +376,8 @@ class Explanation(object):
         %s
         %s
         </script>
-        ''' % (random_id, predict_proba_js, predict_value_js, exp_js, raw_js)
+        ''' % (random_id_linear, predict_proba_js, predict_value_js, exp_js, raw_js)
+
         out += u'</body></html>'
 
         return out

@@ -19,6 +19,8 @@ from lime.discretize import BaseDiscretizer
 from . import explanation
 from . import lime_base
 
+import matplotlib.pyplot as plt
+
 
 class TableDomainMapper(explanation.DomainMapper):
     """Maps feature ids to names, generates table views, etc"""
@@ -352,8 +354,14 @@ class LimeTabularExplainer(object):
                                           scaled_data[0],
                                           categorical_features=categorical_features,
                                           discretized_feature_names=discretized_feature_names)
+
+
         ret_exp = explanation.Explanation(domain_mapper,
+                                          data_row=data_row,
                                           mode=self.mode,
+                                          mean=self.scaler.mean_,
+                                          scale=self.scaler.scale_,
+                                          feature_names=self.feature_names,
                                           class_names=self.class_names)
         ret_exp.scaled_data = scaled_data
         if self.mode == "classification":
@@ -369,15 +377,16 @@ class LimeTabularExplainer(object):
             labels = [0]
 
         for label in labels:
-            (ret_exp.intercept[label],
-             ret_exp.local_exp[label],
-             ret_exp.score, ret_exp.local_pred) = self.base.explain_instance_with_data(
+            # (ret_exp.intercept[label],
+            #  ret_exp.local_exp[label],
+            #  ret_exp.score, ret_exp.local_pred) = self.base.explain_instance_with_data(
+            (ret_exp.local_exp[label],
+            ret_exp.gam_exp[label]) = self.base.explain_instance_with_data(
                     scaled_data,
                     yss,
                     distances,
                     label,
                     num_features,
-                    model_type=model_type,
                     model_regressor=model_regressor,
                     feature_selection=self.feature_selection)
 
@@ -385,7 +394,6 @@ class LimeTabularExplainer(object):
             ret_exp.intercept[1] = ret_exp.intercept[0]
             ret_exp.local_exp[1] = [x for x in ret_exp.local_exp[0]]
             ret_exp.local_exp[0] = [(i, -1 * j) for i, j in ret_exp.local_exp[1]]
-
         return ret_exp
 
     def __data_inverse(self,
