@@ -11,7 +11,7 @@ from sklearn.linear_model import Ridge, lars_path
 from sklearn.utils import check_random_state
 
 import matplotlib.pyplot as plt
-from pygam import LinearGAM
+from pygam import LinearGAM, s
 
 
 
@@ -168,7 +168,7 @@ class LimeBase(object):
             model_regressor = Ridge(alpha=1, fit_intercept=True,
                                     random_state=self.random_state)
         if gam_type is None:
-            gam_type = LinearGAM(max_iter=10)
+            gam_type = LinearGAM()
 
         linear_model = model_regressor
         gam = gam_type

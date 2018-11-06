@@ -291,21 +291,21 @@ class Explanation(object):
 
         for label in labels:
             feature_plots = self.gam_exp[label]
-            nrows = int(math.ceil(len(feature_plots) / 3.0)) 
+            nrows = int(math.ceil(len(feature_plots) / 3.0))
             fig, axes = plt.subplots(ncols=3, nrows=nrows, sharey=True)
             for i, f_plot in enumerate(feature_plots):
                 row = i % 3
                 col = i // 3
                 ax = axes[col][row]
                 feature = f_plot[0]
-                ax.set_title('Feature %d: %s' % (feature, self.feature_names[feature]))
+                ax.set_title(self.feature_names[feature])
                 ax.set_ylabel(str(self.class_names[label]))
-                x = f_plot[1] * self.mean[feature] + self.scale[feature]
+                x = f_plot[1] * self.scale[feature] + self.mean[feature]
                 y = f_plot[2]
                 ax.plot(x, y)
-                ax.axvline(x=self.data_row[feature], c='r', ls='--')
+                # ax.axvline(x=self.data_row[feature], c='r', ls='--')
 
-            fig.set_size_inches(12, 4 * nrows)
+            fig.set_size_inches(9, 3 * nrows)
             fig.tight_layout()
             tmpfile = BytesIO()
             fig.savefig(tmpfile, format='png')
