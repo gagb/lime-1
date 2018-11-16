@@ -13,7 +13,8 @@ from sklearn.utils import check_random_state
 import matplotlib.pyplot as plt
 from pygam import LinearGAM, s
 
-
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score, accuracy_score
 
 class LimeBase(object):
     """Class for learning a locally linear sparse model from perturbed data"""
@@ -164,20 +165,31 @@ class LimeBase(object):
                                                weights,
                                                num_features,
                                                feature_selection)
-        if model_regressor is None:
-            model_regressor = Ridge(alpha=1, fit_intercept=True,
-                                    random_state=self.random_state)
-        if gam_type is None:
-            gam_type = LinearGAM()
 
-        linear_model = model_regressor
-        gam = gam_type
-        linear_model.fit(neighborhood_data[:, used_features],
-                         labels_column, sample_weight=weights)
+        X = neighborhood_data[:, used_features]
+        y = neighborhood_labels[:, label]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-        gam.fit(neighborhood_data[:, used_features],
-                        labels_column, weights=weights)
+        linear_model = Ridge(alpha=1, fit_intercept=True,
+                             random_state=self.random_state)
+        gam = LinearGAM()
 
+        linear_model.fit(X_train, y_train)
+        gam.fit(X_train, y_train)
+
+        y_pred_lr = np.where(linear_model.predict(X_test) > 0.5, 1, 0)
+        y_pred_gam = np.where(gam.predict(X_test) > 0.5, 1, 0)
+        y_true = np.where(y_test > 0.5, 1, 0)
+        
+        acc_lr = (accuracy_score(y_true, y_pred_lr))
+        print('\t' + str(acc_lr))
+        acc_gam = (accuracy_score(y_true, y_pred_gam))
+        print('\t' + str(acc_gam))
+        f1_lr = (f1_score(y_true, y_pred_lr))
+        print('\t' + str(f1_lr))
+        f1_gam = (f1_score(y_true, y_pred_gam))
+        print('\t' + str(f1_gam))
+        acc = (acc_lr, acc_gam, f1_lr, f1_gam)
 
         prediction_score = linear_model.score(
             neighborhood_data[:, used_features],
@@ -205,4 +217,4 @@ class LimeBase(object):
         #         sorted(zip(used_features, linear_model.coef_),
         #                key=lambda x: np.abs(x[1]), reverse=True),
         #         prediction_score, local_pred)
-        return (linear_exp, gam_exp)
+        return (acc, linear_exp, gam_exp)
