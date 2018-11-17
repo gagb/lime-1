@@ -182,13 +182,9 @@ class LimeBase(object):
         y_true = np.where(y_test > 0.5, 1, 0)
         
         acc_lr = (accuracy_score(y_true, y_pred_lr))
-        print('\t' + str(acc_lr))
         acc_gam = (accuracy_score(y_true, y_pred_gam))
-        print('\t' + str(acc_gam))
         f1_lr = (f1_score(y_true, y_pred_lr))
-        print('\t' + str(f1_lr))
         f1_gam = (f1_score(y_true, y_pred_gam))
-        print('\t' + str(f1_gam))
         acc = (acc_lr, acc_gam, f1_lr, f1_gam)
 
         prediction_score = linear_model.score(
