@@ -13,8 +13,9 @@ from sklearn.utils import check_random_state
 import matplotlib.pyplot as plt
 from pygam import LinearGAM, s
 
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import mean_squared_error, explained_variance_score
 
 class LimeBase(object):
     """Class for learning a locally linear sparse model from perturbed data"""
@@ -168,24 +169,63 @@ class LimeBase(object):
 
         X = neighborhood_data[:, used_features]
         y = neighborhood_labels[:, label]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        (X_train,
+         X_test,
+         y_train,
+         y_test,
+         train_weights,
+         test_weights) = train_test_split(X, y, weights, test_size=0.2)
 
         linear_model = Ridge(alpha=1, fit_intercept=True,
                              random_state=self.random_state)
+
         gam = LinearGAM()
+        dt = DecisionTreeRegressor()
 
-        linear_model.fit(X_train, y_train)
-        gam.fit(X_train, y_train)
+        linear_model.fit(X_train, y_train, sample_weight=train_weights)
+        gam.fit(X_train, y_train, weights=train_weights)
+        dt.fit(X_train, y_train, sample_weight=train_weights)
 
-        y_pred_lr = np.where(linear_model.predict(X_test) > 0.5, 1, 0)
-        y_pred_gam = np.where(gam.predict(X_test) > 0.5, 1, 0)
-        y_true = np.where(y_test > 0.5, 1, 0)
-        
-        acc_lr = (accuracy_score(y_true, y_pred_lr))
-        acc_gam = (accuracy_score(y_true, y_pred_gam))
-        f1_lr = (f1_score(y_true, y_pred_lr))
-        f1_gam = (f1_score(y_true, y_pred_gam))
-        acc = (acc_lr, acc_gam, f1_lr, f1_gam)
+        # # plot
+        # for i, term in enumerate(gam.terms):
+        #     if term.isintercept:
+        #         continue
+        #     XX = gam.generate_X_grid(term=i)
+        #     # pdep = gam.predict(XX)
+        #     pdep = gam.partial_dependence(term=i, X=XX) + linear_model.intercept_
+        #     # line = XX[:, term.feature] * linear_model.coef_[term.feature]
+        #     line = linear_model.predict(XX)
+        #     dect = dt.predict(XX)
+        #     plt.figure()
+        #     plt.plot(XX[:, term.feature], pdep)
+        #     plt.plot(XX[:, term.feature], line)
+        #     plt.plot(XX[:, term.feature], dect)
+        #     plt.title(repr(term))
+        #     plt.show()
+        # exit()
+
+
+        y_lr = linear_model.predict(X_test)
+        y_gam = gam.predict(X_test)
+        y_dt = dt.predict(X_test)
+
+        # y_lr = linear_model.predict(X_train)
+        # y_gam = gam.predict(X_train)
+        # y_dt = dt.predict(X_train)
+
+        # mse_lr = mean_squared_error(y_test, y_lr, sample_weight=test_weights)
+        # mse_gam = mean_squared_error(y_test, y_gam, sample_weight=test_weights)
+        # mse_dt = mean_squared_error(y_test, y_dt, sample_weight=test_weights)
+
+        mse_lr = explained_variance_score(y_test, y_lr, sample_weight=test_weights)
+        mse_gam = explained_variance_score(y_test, y_gam, sample_weight=test_weights)
+        mse_dt = explained_variance_score(y_test, y_dt, sample_weight=test_weights)
+
+        # mse_lr = explained_variance_score(y_train, y_lr, sample_weight=train_weights)
+        # mse_gam = explained_variance_score(y_train, y_gam, sample_weight=train_weights)
+        # mse_dt = explained_variance_score(y_train, y_dt, sample_weight=train_weights)
+
+        metrics = (mse_lr, mse_gam, mse_dt)
 
         prediction_score = linear_model.score(
             neighborhood_data[:, used_features],
@@ -213,4 +253,4 @@ class LimeBase(object):
         #         sorted(zip(used_features, linear_model.coef_),
         #                key=lambda x: np.abs(x[1]), reverse=True),
         #         prediction_score, local_pred)
-        return (acc, linear_exp, gam_exp)
+        return (metrics, linear_exp, gam_exp)
