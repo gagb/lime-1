@@ -15,7 +15,7 @@ from pygam import LinearGAM, s
 
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, explained_variance_score
+from sklearn.metrics import f1_score, classification_report
 
 class LimeBase(object):
     """Class for learning a locally linear sparse model from perturbed data"""
@@ -116,6 +116,8 @@ class LimeBase(object):
                                           num_features, n_method)
 
     def explain_instance_with_data(self,
+                                   training_data,
+                                   training_labels,
                                    neighborhood_data,
                                    neighborhood_labels,
                                    distances,
@@ -158,7 +160,7 @@ class LimeBase(object):
             by decreasing absolute value of y.
             score is the R^2 value of the returned explanation
         """
-
+        example = neighborhood_data[0]
         weights = self.kernel_fn(distances)
         labels_column = neighborhood_labels[:, label]
         used_features = self.feature_selection(neighborhood_data,
@@ -168,70 +170,83 @@ class LimeBase(object):
                                                feature_selection)
 
         X = neighborhood_data[:, used_features]
+        # X = neighborhood_data
         y = neighborhood_labels[:, label]
         (X_train,
          X_test,
          y_train,
          y_test,
          train_weights,
-         test_weights) = train_test_split(X, y, weights, test_size=0.2)
+         test_weights) = train_test_split(X, y, weights, test_size=0.25,
+                             random_state=self.random_state)
 
         linear_model = Ridge(alpha=1, fit_intercept=True,
                              random_state=self.random_state)
-
         gam = LinearGAM()
-        dt = DecisionTreeRegressor()
 
         linear_model.fit(X_train, y_train, sample_weight=train_weights)
         gam.fit(X_train, y_train, weights=train_weights)
-        dt.fit(X_train, y_train, sample_weight=train_weights)
 
-        # # plot
-        # for i, term in enumerate(gam.terms):
-        #     if term.isintercept:
-        #         continue
-        #     XX = gam.generate_X_grid(term=i)
-        #     # pdep = gam.predict(XX)
-        #     pdep = gam.partial_dependence(term=i, X=XX) + linear_model.intercept_
-        #     # line = XX[:, term.feature] * linear_model.coef_[term.feature]
-        #     line = linear_model.predict(XX)
-        #     dect = dt.predict(XX)
-        #     plt.figure()
-        #     plt.plot(XX[:, term.feature], pdep)
-        #     plt.plot(XX[:, term.feature], line)
-        #     plt.plot(XX[:, term.feature], dect)
-        #     plt.title(repr(term))
-        #     plt.show()
-        # exit()
+        ax = plt.subplot(221)
+        plt.title('True Model')
+        x = X[:, 0]
+        y = X[:, 1]
+        # z1 = neighborhood_labels[:, 0]
+        z1 = np.where(labels_column >= 0.5, 1, 0)
+        plt.tricontourf(x, y, z1)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
 
+        plt.subplot(222, sharex=ax, sharey=ax)
+        plt.title('Weights')
+        z4 = weights
+        plt.tricontourf(x, y, z4)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
 
-        y_lr = linear_model.predict(X_test)
-        y_gam = gam.predict(X_test)
-        y_dt = dt.predict(X_test)
+        plt.subplot(223, sharex=ax, sharey=ax)
+        plt.title('Linear Regression')
+        z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
+        plt.tricontourf(x, y, z3)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
 
-        # y_lr = linear_model.predict(X_train)
-        # y_gam = gam.predict(X_train)
-        # y_dt = dt.predict(X_train)
+        plt.subplot(224, sharex=ax, sharey=ax)
+        plt.title('GAM')
+        z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
+        plt.tricontourf(x, y, z2)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
 
-        # mse_lr = mean_squared_error(y_test, y_lr, sample_weight=test_weights)
-        # mse_gam = mean_squared_error(y_test, y_gam, sample_weight=test_weights)
-        # mse_dt = mean_squared_error(y_test, y_dt, sample_weight=test_weights)
+        plt.tight_layout()
+        plt.show()
 
-        mse_lr = explained_variance_score(y_test, y_lr, sample_weight=test_weights)
-        mse_gam = explained_variance_score(y_test, y_gam, sample_weight=test_weights)
-        mse_dt = explained_variance_score(y_test, y_dt, sample_weight=test_weights)
+        y1 = np.where(y_test >= 0.5, 1, 0)
+        y2 = np.where(linear_model.predict(X_test) >= 0.5, 1, 0)
+        y3 = np.where(gam.predict(X_test) >= 0.5, 1, 0)
 
-        # mse_lr = explained_variance_score(y_train, y_lr, sample_weight=train_weights)
-        # mse_gam = explained_variance_score(y_train, y_gam, sample_weight=train_weights)
-        # mse_dt = explained_variance_score(y_train, y_dt, sample_weight=train_weights)
-
-        metrics = (mse_lr, mse_gam, mse_dt)
+        metrics = dict()
+        metrics['lr'] = f1_score(y1, y2)
+        metrics['gam'] = f1_score(y1, y3)
 
         prediction_score = linear_model.score(
             neighborhood_data[:, used_features],
             labels_column, sample_weight=weights)
 
-        local_pred = linear_model.predict(neighborhood_data[0, used_features].reshape(1, -1))
+        local_pred = linear_model.predict(
+                neighborhood_data[0, used_features].reshape(1, -1))
 
         linear_exp = sorted(zip(used_features, linear_model.coef_),
                             key=lambda x: np.abs(x[1]), reverse=True)
@@ -249,8 +264,4 @@ class LimeBase(object):
             print('Intercept', linear_model.intercept_)
             print('Prediction_local', local_pred,)
             print('Right:', neighborhood_labels[0, label])
-        # return (linear_model.intercept_,
-        #         sorted(zip(used_features, linear_model.coef_),
-        #                key=lambda x: np.abs(x[1]), reverse=True),
-        #         prediction_score, local_pred)
         return (metrics, linear_exp, gam_exp)

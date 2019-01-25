@@ -156,6 +156,8 @@ class LimeTabularExplainer(object):
                 generate random numbers. If None, the random state will be
                 initialized using the internal numpy seed.
         """
+        self.training_data = training_data
+        self.training_labels = training_labels
         self.random_state = check_random_state(random_state)
         self.mode = mode
         self.categorical_names = categorical_names or {}
@@ -194,8 +196,8 @@ class LimeTabularExplainer(object):
                     training_data)
 
         if kernel_width is None:
-            # kernel_width = np.sqrt(training_data.shape[1]) * 3.00
             kernel_width = np.sqrt(training_data.shape[1]) * 0.75
+            # kernel_width = np.sqrt(training_data.shape[1]) * 10
         kernel_width = float(kernel_width)
 
         if kernel is None:
@@ -203,6 +205,7 @@ class LimeTabularExplainer(object):
                 return np.sqrt(np.exp(-(d ** 2) / kernel_width ** 2))
 
         kernel_fn = partial(kernel, kernel_width=kernel_width)
+        self.kernel_fn = kernel_fn
 
         self.feature_selection = feature_selection
         self.base = lime_base.LimeBase(kernel_fn, verbose, random_state=self.random_state)
@@ -385,7 +388,10 @@ class LimeTabularExplainer(object):
             (accs[label],
             ret_exp.local_exp[label],
             ret_exp.gam_exp[label]) = self.base.explain_instance_with_data(
+                    self.training_data,
+                    self.training_labels,
                     scaled_data,
+                    # data,
                     yss,
                     distances,
                     label,
