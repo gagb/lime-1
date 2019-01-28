@@ -197,7 +197,6 @@ class LimeTabularExplainer(object):
 
         if kernel_width is None:
             kernel_width = np.sqrt(training_data.shape[1]) * 0.75
-            # kernel_width = np.sqrt(training_data.shape[1]) * 10
         kernel_width = float(kernel_width)
 
         if kernel is None:
