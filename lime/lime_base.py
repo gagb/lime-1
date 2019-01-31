@@ -15,7 +15,8 @@ from pygam import LinearGAM, s
 
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, classification_report
+from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import mean_squared_error, explained_variance_score
 
 class LimeBase(object):
     """Class for learning a locally linear sparse model from perturbed data"""
@@ -187,59 +188,85 @@ class LimeBase(object):
         linear_model.fit(X_train, y_train, sample_weight=train_weights)
         gam.fit(X_train, y_train, weights=train_weights)
 
-        # ax = plt.subplot(221)
-        # plt.title('True Model')
-        # x = X[:, 0]
-        # y = X[:, 1]
-        # # z1 = neighborhood_labels[:, 0]
-        # z1 = np.where(labels_column >= 0.5, 1, 0)
-        # plt.tricontourf(x, y, z1)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # plt.subplot(222, sharex=ax, sharey=ax)
-        # plt.title('Weights')
-        # z4 = weights
-        # plt.tricontourf(x, y, z4)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # plt.subplot(223, sharex=ax, sharey=ax)
-        # plt.title('Linear Regression')
-        # z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
-        # plt.tricontourf(x, y, z3)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # plt.subplot(224, sharex=ax, sharey=ax)
-        # plt.title('GAM')
-        # z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
-        # plt.tricontourf(x, y, z2)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # plt.tight_layout()
-        # plt.show()
+        ax = plt.subplot(221)
+        plt.title('True Model')
+        x = X[:, 0]
+        y = X[:, 1]
+        # z1 = neighborhood_labels[:, 0]
+        z1 = np.where(labels_column >= 0.5, 1, 0)
+        plt.tricontourf(x, y, z1)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
 
-        y1 = np.where(y_test >= 0.5, 1, 0)
-        y2 = np.where(linear_model.predict(X_test) >= 0.5, 1, 0)
-        y3 = np.where(gam.predict(X_test) >= 0.5, 1, 0)
+        plt.subplot(222, sharex=ax, sharey=ax)
+        plt.title('Weights')
+        z4 = weights
+        plt.tricontourf(x, y, z4)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
+
+        plt.subplot(223, sharex=ax, sharey=ax)
+        plt.title('Linear Regression')
+        z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
+        plt.tricontourf(x, y, z3)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
+
+        plt.subplot(224, sharex=ax, sharey=ax)
+        plt.title('GAM')
+        z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
+        plt.tricontourf(x, y, z2)
+        plt.colorbar()
+        plt.plot(example[0], example[1],
+                 marker='o',
+                 markersize=5,
+                 color='red')
+
+        plt.tight_layout()
+        plt.show()
+       
+        # regression results
+        y_true = y_test
+        y_line = linear_model.predict(X_test)
+        y_gam = gam.predict(X_test)
+
+        # classification results
+        y1 = np.where(y_true >= 0.5, 1, 0)
+        y2 = np.where(y_line >= 0.5, 1, 0)
+        y3 = np.where(y_gam >= 0.5, 1, 0)
 
         metrics = dict()
-        metrics['lr'] = f1_score(y1, y2)
-        metrics['gam'] = f1_score(y1, y3)
+        metrics['lr'] = dict()
+        metrics['gam'] = dict() 
+
+        # regression scores
+        metrics['lr']['mse'] = mean_squared_error(
+            y_true, y_line, sample_weight=test_weights)
+        metrics['gam']['mse'] = mean_squared_error(
+            y_true, y_gam, sample_weight=test_weights)
+        metrics['lr']['ev'] = explained_variance_score(
+            y_true, y_line, sample_weight=test_weights)
+        metrics['gam']['ev'] = mean_squared_error(
+            y_true, y_line, sample_weight=test_weights)
+
+        # classification scores
+        metrics['lr']['f1'] = f1_score(
+            y1, y2, sample_weight=test_weights)
+        metrics['gam']['f1'] = f1_score(
+            y1, y3, sample_weight=test_weights)
+        metrics['lr']['acc'] = accuracy_score(
+            y1, y2, sample_weight=test_weights)
+        metrics['gam']['acc'] = accuracy_score(
+            y1, y3, sample_weight=test_weights)
 
         prediction_score = linear_model.score(
             neighborhood_data[:, used_features],
