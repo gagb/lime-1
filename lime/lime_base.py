@@ -188,51 +188,51 @@ class LimeBase(object):
         linear_model.fit(X_train, y_train, sample_weight=train_weights)
         gam.fit(X_train, y_train, weights=train_weights)
 
-        ax = plt.subplot(221)
-        plt.title('True Model')
-        x = X[:, 0]
-        y = X[:, 1]
-        # z1 = neighborhood_labels[:, 0]
-        z1 = np.where(labels_column >= 0.5, 1, 0)
-        plt.tricontourf(x, y, z1)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
-
-        plt.subplot(222, sharex=ax, sharey=ax)
-        plt.title('Weights')
-        z4 = weights
-        plt.tricontourf(x, y, z4)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
-
-        plt.subplot(223, sharex=ax, sharey=ax)
-        plt.title('Linear Regression')
-        z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
-        plt.tricontourf(x, y, z3)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
-
-        plt.subplot(224, sharex=ax, sharey=ax)
-        plt.title('GAM')
-        z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
-        plt.tricontourf(x, y, z2)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
-
-        plt.tight_layout()
-        plt.show()
+        # ax = plt.subplot(221)
+        # plt.title('True Model')
+        # x = X[:, 0]
+        # y = X[:, 1]
+        # # z1 = neighborhood_labels[:, 0]
+        # z1 = np.where(labels_column >= 0.5, 1, 0)
+        # plt.tricontourf(x, y, z1)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # plt.subplot(222, sharex=ax, sharey=ax)
+        # plt.title('Weights')
+        # z4 = weights
+        # plt.tricontourf(x, y, z4)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # plt.subplot(223, sharex=ax, sharey=ax)
+        # plt.title('Linear Regression')
+        # z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
+        # plt.tricontourf(x, y, z3)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # plt.subplot(224, sharex=ax, sharey=ax)
+        # plt.title('GAM')
+        # z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
+        # plt.tricontourf(x, y, z2)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # plt.tight_layout()
+        # plt.show()
        
         # regression results
         y_true = y_test
@@ -255,8 +255,8 @@ class LimeBase(object):
             y_true, y_gam, sample_weight=test_weights)
         metrics['lr']['ev'] = explained_variance_score(
             y_true, y_line, sample_weight=test_weights)
-        metrics['gam']['ev'] = mean_squared_error(
-            y_true, y_line, sample_weight=test_weights)
+        metrics['gam']['ev'] = explained_variance_score(
+            y_true, y_gam, sample_weight=test_weights)
 
         # classification scores
         metrics['lr']['f1'] = f1_score(
