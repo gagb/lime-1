@@ -171,7 +171,7 @@ class LimeBase(object):
                                                feature_selection)
 
         X = neighborhood_data[:, used_features]
-        X = neighborhood_data  # uncomment for visualiztions
+        # X = neighborhood_data  # uncomment for visualiztions
         y = neighborhood_labels[:, label]
         (X_train,
          X_test,
@@ -190,52 +190,66 @@ class LimeBase(object):
         gam.fit(X_train, y_train, weights=train_weights)
         decision_tree.fit(X_train, y_train, sample_weight=train_weights)
 
-        # Visualizations (only works on toy 2-d dataset)
-        ax = plt.subplot(221)
-        plt.title('True Model')
-        x = X[:, 0]
-        y = X[:, 1]
-        # z1 = neighborhood_labels[:, 0]
-        z1 = np.where(labels_column >= 0.5, 1, 0)
-        plt.tricontourf(x, y, z1)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
+        # # Visualizations (only works on toy 2-d dataset)
+        # ax = plt.subplot(321)
+        # plt.title('True Model')
+        # x = X[:, 0]
+        # y = X[:, 1]
+        # # z1 = neighborhood_labels[:, 0]
+        # z1 = np.where(labels_column >= 0.5, 1, 0)
+        # plt.tricontourf(x, y, z1)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # plt.subplot(322, sharex=ax, sharey=ax)
+        # plt.title('Weights')
+        # z4 = weights
+        # plt.tricontourf(x, y, z4)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # plt.subplot(323, sharex=ax, sharey=ax)
+        # plt.title('Linear Regression')
+        # z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
+        # plt.tricontourf(x, y, z3)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # # GAM PLOT
+        # plt.subplot(324, sharex=ax, sharey=ax)
+        # plt.title('GAM')
+        # z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
+        # plt.tricontourf(x, y, z2)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # # DT PLOT
+        # plt.subplot(325, sharex=ax, sharey=ax)
+        # plt.title('DT')
+        # z5 = np.where(decision_tree.predict(neighborhood_data) >= 0.5, 1, 0)
+        # plt.tricontourf(x, y, z5)
+        # plt.colorbar()
+        # plt.plot(example[0], example[1],
+        #          marker='o',
+        #          markersize=5,
+        #          color='red')
+        #
+        # plt.tight_layout()
+        # plt.show()
 
-        plt.subplot(222, sharex=ax, sharey=ax)
-        plt.title('Weights')
-        z4 = weights
-        plt.tricontourf(x, y, z4)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
 
-        plt.subplot(223, sharex=ax, sharey=ax)
-        plt.title('Linear Regression')
-        z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
-        plt.tricontourf(x, y, z3)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
-
-        plt.subplot(224, sharex=ax, sharey=ax)
-        plt.title('GAM')
-        z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
-        plt.tricontourf(x, y, z2)
-        plt.colorbar()
-        plt.plot(example[0], example[1],
-                 marker='o',
-                 markersize=5,
-                 color='red')
-
-        plt.tight_layout()
-        plt.show()
 
         # regression results
         y_true_reg = y_test
