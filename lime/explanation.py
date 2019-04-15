@@ -290,39 +290,39 @@ class Explanation(object):
         ''' % random_id_gam
 
         def find_nearest(array,value):
-	    idx = np.searchsorted(array, value, side="left")
-	    if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx])):
-		return idx-1
-	    else:
-		return idx
+            idx = np.searchsorted(array, value, side="left")
+            if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx])):
+                return idx-1
+            else:
+                return idx
 
-        for label in labels:
-            feature_plots = self.gam_exp[label]
-            nrows = int(math.ceil(len(feature_plots) / 4.0))
-            fig, axes = plt.subplots(ncols=4, nrows=nrows, sharey=True)
-            for i, f_plot in enumerate(feature_plots):
-                row = i % 4
-                col = i // 4
-                ax = axes[col][row]
-                feature = f_plot[0]
-                ax.set_title(self.feature_names[feature])
-                ax.set_ylabel(str(self.class_names[label]))
-                x = f_plot[1] * self.scale[feature] + self.mean[feature]
-                y = f_plot[2]
-                ax.plot(x, y)
-		x_near = find_nearest(x, self.data_row[feature])
-		ymax = y[x_near]	
-                ax.vlines(x=self.data_row[feature], ymin=0, ymax=ymax, color='r', linestyle='--')
-                ax.axhline(y=0, c='g', ls='--')
-
-            fig.set_size_inches(4 * 2.5, 2.5 * nrows)
-            fig.tight_layout()
-            tmpfile = BytesIO()
-            fig.savefig(tmpfile, format='png')
-            plt.close(fig)
-            encoded = base64.b64encode(tmpfile.getvalue())
-            out += u'''<img src=\'data:image/png;base64,{}\'>'''.format(encoded)
-
+        # for label in labels:
+        #     feature_plots = self.gam_exp[label]
+        #     nrows = int(math.ceil(len(feature_plots) / 4.0))
+        #     fig, axes = plt.subplots(ncols=4, nrows=nrows, sharey=True)
+        #     for i, f_plot in enumerate(feature_plots):
+        #         row = i % 4
+        #         col = i // 4
+        #         ax = axes[col][row]
+        #         feature = f_plot[0]
+        #         ax.set_title(self.feature_names[feature])
+        #         ax.set_ylabel(str(self.class_names[label]))
+        #         x = f_plot[1] * self.scale[feature] + self.mean[feature]
+        #         y = f_plot[2]
+        #         ax.plot(x, y)
+        #         x_near = find_nearest(x, self.data_row[feature])
+        #         ymax = y[x_near]
+        #         ax.vlines(x=self.data_row[feature], ymin=0, ymax=ymax, color='r', linestyle='--')
+        #         ax.axhline(y=0, c='g', ls='--')
+        #
+        #     fig.set_size_inches(4 * 2.5, 2.5 * nrows)
+        #     fig.tight_layout()
+        #     tmpfile = BytesIO()
+        #     fig.savefig(tmpfile, format='png')
+        #     plt.close(fig)
+        #     encoded = base64.b64encode(tmpfile.getvalue())
+        #     out += u'''<img src=\'data:image/png;base64,{}\'>'''.format(encoded)
+        #
         out += u'''</div>'''
 
         predict_proba_js = ''

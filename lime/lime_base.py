@@ -13,6 +13,7 @@ from sklearn.utils import check_random_state
 import matplotlib.pyplot as plt
 from pygam import LinearGAM, s
 
+from scipy.spatial import distance
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, accuracy_score
@@ -126,7 +127,8 @@ class LimeBase(object):
                                    num_features,
                                    feature_selection='auto',
                                    model_regressor=None,
-                                   gam_type=None):
+                                   use_gam=False,
+                                   visualize=False):
         """Takes perturbed data, labels and distances, returns explanation.
 
         Args:
@@ -163,6 +165,8 @@ class LimeBase(object):
         """
         example = neighborhood_data[0]
         weights = self.kernel_fn(distances)
+        x = weights[ np.where(weights > 0.001) ]
+        print("non zero neighborhood points:", len(x))
         labels_column = neighborhood_labels[:, label]
         used_features = self.feature_selection(neighborhood_data,
                                                labels_column,
@@ -171,7 +175,8 @@ class LimeBase(object):
                                                feature_selection)
 
         X = neighborhood_data[:, used_features]
-        # X = neighborhood_data  # uncomment for visualiztions
+        if visualize: 
+            X = neighborhood_data  # uncomment for visualiztions
         y = neighborhood_labels[:, label]
         (X_train,
          X_test,
@@ -190,64 +195,65 @@ class LimeBase(object):
         gam.fit(X_train, y_train, weights=train_weights)
         decision_tree.fit(X_train, y_train, sample_weight=train_weights)
 
-        # # Visualizations (only works on toy 2-d dataset)
-        # ax = plt.subplot(321)
-        # plt.title('True Model')
-        # x = X[:, 0]
-        # y = X[:, 1]
-        # # z1 = neighborhood_labels[:, 0]
-        # z1 = np.where(labels_column >= 0.5, 1, 0)
-        # plt.tricontourf(x, y, z1)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # plt.subplot(322, sharex=ax, sharey=ax)
-        # plt.title('Weights')
-        # z4 = weights
-        # plt.tricontourf(x, y, z4)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # plt.subplot(323, sharex=ax, sharey=ax)
-        # plt.title('Linear Regression')
-        # z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
-        # plt.tricontourf(x, y, z3)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # # GAM PLOT
-        # plt.subplot(324, sharex=ax, sharey=ax)
-        # plt.title('GAM')
-        # z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
-        # plt.tricontourf(x, y, z2)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # # DT PLOT
-        # plt.subplot(325, sharex=ax, sharey=ax)
-        # plt.title('DT')
-        # z5 = np.where(decision_tree.predict(neighborhood_data) >= 0.5, 1, 0)
-        # plt.tricontourf(x, y, z5)
-        # plt.colorbar()
-        # plt.plot(example[0], example[1],
-        #          marker='o',
-        #          markersize=5,
-        #          color='red')
-        #
-        # plt.tight_layout()
-        # plt.show()
+        # Visualizations (only works on toy 2-d dataset)
+        if visualize:
+            ax = plt.subplot(231)
+            plt.title('True Model')
+            x = X[:, 0]
+            y = X[:, 1]
+            # z1 = neighborhood_labels[:, 0]
+            z1 = np.where(labels_column >= 0.5, 1, 0)
+            plt.tricontourf(x, y, z1)
+            plt.colorbar()
+            plt.plot(example[0], example[1],
+                     marker='o',
+                     markersize=5,
+                     color='red')
+
+            plt.subplot(232, sharex=ax, sharey=ax)
+            plt.title('Weights')
+            z4 = weights
+            plt.tricontourf(x, y, z4)
+            plt.colorbar()
+            plt.plot(example[0], example[1],
+                     marker='o',
+                     markersize=5,
+                     color='red')
+
+            plt.subplot(234, sharex=ax, sharey=ax)
+            plt.title('Linear Regression')
+            z3 = np.where(linear_model.predict(neighborhood_data) >= 0.5, 1, 0)
+            plt.tricontourf(x, y, z3)
+            plt.colorbar()
+            plt.plot(example[0], example[1],
+                     marker='o',
+                     markersize=5,
+                     color='red')
+
+            # GAM PLOT
+            plt.subplot(235, sharex=ax, sharey=ax)
+            plt.title('GAM')
+            z2 = np.where(gam.predict(neighborhood_data) >= 0.5, 1, 0)
+            plt.tricontourf(x, y, z2)
+            plt.colorbar()
+            plt.plot(example[0], example[1],
+                     marker='o',
+                     markersize=5,
+                     color='red')
+
+            # DT PLOT
+            plt.subplot(236, sharex=ax, sharey=ax)
+            plt.title('DT')
+            z5 = np.where(decision_tree.predict(neighborhood_data) >= 0.5, 1, 0)
+            plt.tricontourf(x, y, z5)
+            plt.colorbar()
+            plt.plot(example[0], example[1],
+                     marker='o',
+                     markersize=5,
+                     color='red')
+
+            plt.tight_layout()
+            plt.show()
 
 
 
@@ -269,7 +275,7 @@ class LimeBase(object):
         metrics['GAM'] = dict()
         metrics['DT'] = dict()
 
-        # regression scores
+        # # regression scores
         metrics['LR']['MSE'] = mean_squared_error(
             y_true_reg, y_line_reg, sample_weight=test_weights)
         metrics['GAM']['MSE'] = mean_squared_error(
@@ -277,20 +283,27 @@ class LimeBase(object):
         metrics['DT']['MSE'] = mean_squared_error(
             y_true_reg, y_dt_reg, sample_weight=test_weights)
 
-        # classification scores
-        metrics['LR']['f1-score'] = f1_score(
+        # # classification scores
+        metrics['LR']['Local F1-score'] = f1_score(
             y_true_clf, y_line_clf, sample_weight=test_weights)
-        metrics['GAM']['f1-score'] = f1_score(
+        metrics['GAM']['Local F1-score'] = f1_score(
             y_true_clf, y_gam_clf, sample_weight=test_weights)
-        metrics['DT']['f1-score'] = f1_score(
+        metrics['DT']['Local F1-score'] = f1_score(
             y_true_clf, y_dt_clf, sample_weight=test_weights)
 
-        metrics['LR']['Accuracy'] = accuracy_score(
+        metrics['LR']['Local Accuracy'] = accuracy_score(
             y_true_clf, y_line_clf, sample_weight=test_weights)
-        metrics['GAM']['Accuracy'] = accuracy_score(
+        metrics['GAM']['Local Accuracy'] = accuracy_score(
             y_true_clf, y_gam_clf, sample_weight=test_weights)
-        metrics['DT']['Accuracy'] = accuracy_score(
+        metrics['DT']['Local Accuracy'] = accuracy_score(
             y_true_clf, y_dt_clf, sample_weight=test_weights)
+
+        metrics['LR']['Global Accuracy'] = accuracy_score(
+            y_true_clf, y_line_clf)
+        metrics['GAM']['Global Accuracy'] = accuracy_score(
+            y_true_clf, y_gam_clf)
+        metrics['DT']['Global Accuracy'] = accuracy_score(
+            y_true_clf, y_dt_clf)
 
         # LIME visualization code
         prediction_score = linear_model.score(
@@ -302,20 +315,46 @@ class LimeBase(object):
 
         linear_exp = sorted(zip(used_features, linear_model.coef_),
                             key=lambda x: np.abs(x[1]), reverse=True)
+        if use_gam:
+            gam_prediction_score = explained_variance_score(
+                labels_column,
+                gam.predict(neighborhood_data[:, used_features]),
+                sample_weight=weights)
 
-        # GLIME visualization code (in progress)
-        gam_exp = []
-        for i, term in enumerate(gam.terms):
-            if term.isintercept:
-                continue
-            XX = gam.generate_X_grid(term=i)
-            y = gam.partial_dependence(term=i, X=XX)
-            x = XX[:, i]
-            feature = used_features[i]
-            gam_exp.append( (used_features[i], x, y) )
+            gam_local_pred = gam.predict(
+                    neighborhood_data[0, used_features].reshape(1, -1))
+
+            print(gam_local_pred)
+
+            gam_coefs = []
+            gam_coefs2 = []
+            for i, term in enumerate(gam.terms):
+                if term.isintercept:
+                    continue
+                split = []
+                for i2, x in enumerate(neighborhood_data[0, used_features]):
+                    split.append(x if i==i2 else 0)
+                gam_coefs.append(np.asscalar(gam._linear_predictor(X=[split], term=i)))
+
+            gam_exp = sorted(zip(used_features, gam_coefs),
+                                key=lambda x: np.abs(x[1]), reverse=True)
+
+            return (metrics, gam_exp)
+
+
+        # # GLIME visualization code (in progress)
+        # gam_exp = []
+        # for i, term in enumerate(gam.terms):
+        #     if term.isintercept:
+        #         continue
+        #     XX = gam.generate_X_grid(term=i)
+        #     y = gam.partial_dependence(term=i, X=XX)
+        #     x = XX[:, i]
+        #     feature = used_features[i]
+        #     gam_exp.append( (used_features[i], x, y) )
 
         if self.verbose:
             print('Intercept', linear_model.intercept_)
             print('Prediction_local', local_pred,)
             print('Right:', neighborhood_labels[0, label])
-        return (metrics, linear_exp, gam_exp)
+        return (metrics, linear_exp) #, gam_exp)

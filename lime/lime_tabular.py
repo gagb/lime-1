@@ -1,6 +1,7 @@
 """
 Functions for explaining classifiers that use tabular data (matrices).
 """
+from __future__ import print_function
 import collections
 import copy
 from functools import partial
@@ -156,6 +157,7 @@ class LimeTabularExplainer(object):
                 generate random numbers. If None, the random state will be
                 initialized using the internal numpy seed.
         """
+        self.kernel_width = kernel_width
         self.training_data = training_data
         self.training_labels = training_labels
         self.random_state = check_random_state(random_state)
@@ -242,7 +244,8 @@ class LimeTabularExplainer(object):
                          num_features=10,
                          num_samples=5000,
                          distance_metric='euclidean',
-                         model_type='linear',
+                         use_gam=False,
+                         visualize=False,
                          model_regressor=None):
         """Generates explanations for a prediction.
 
@@ -284,6 +287,12 @@ class LimeTabularExplainer(object):
                 scaled_data[0].reshape(1, -1),
                 metric=distance_metric
         ).ravel()
+
+        # print("---------------------------------------")
+        # print("kernel_width = %.2f" % self.kernel_width) 
+        # print("distances:", distances)
+        # print("len(distances):", len(distances))
+        # print("np unique:", np.unique(distances))
 
         yss = predict_fn(inverse)
 
@@ -385,18 +394,18 @@ class LimeTabularExplainer(object):
             #  ret_exp.local_exp[label],
             #  ret_exp.score, ret_exp.local_pred) = self.base.explain_instance_with_data(
             (accs[label],
-            ret_exp.local_exp[label],
-            ret_exp.gam_exp[label]) = self.base.explain_instance_with_data(
-                    self.training_data,
-                    self.training_labels,
-                    scaled_data,
-                    # data,
-                    yss,
-                    distances,
-                    label,
-                    num_features,
-                    model_regressor=model_regressor,
-                    feature_selection=self.feature_selection)
+            ret_exp.local_exp[label]) = self.base.explain_instance_with_data(
+                        self.training_data,
+                        self.training_labels,
+                        scaled_data,
+                        yss,
+                        distances,
+                        label,
+                        num_features,
+                        model_regressor=model_regressor,
+                        use_gam=use_gam,
+                        feature_selection=self.feature_selection,
+                        visualize=visualize)
 
         if self.mode == "regression":
             ret_exp.intercept[1] = ret_exp.intercept[0]
